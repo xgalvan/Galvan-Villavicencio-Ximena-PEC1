@@ -1,0 +1,244 @@
+---
+title: "PEC 1"
+author: "Ximena Gabriela Galván Villavicencio"
+output:
+  pdf_document: default
+  word_document: default
+  toc: false
+  toc_depth: 2
+---
+## Análisis del conjunto de dattos cachexia.
+
+## Tabla de Contenidos
+
+1. [Resumen](#resumen)
+2. [Objetivos del Estudio](#objetivos-del-estudio)
+   1. [Objetivo principal](#objetivo-principal)
+   2. [Objetivos específicos](#objetivos-específicos)
+3. [Materiales y Métodos](#materiales-y-métodos)
+   1. [Origen de los datos](#origen-de-los-datos)
+   2. [Estudios previos y selección de metabolitos para el análisis](#estudios-previos-y-selección-de-metabolitos-para-el-análisis)
+   3. [Procedimiento de Análisis](#procedimiento-de-análisis)
+4. [Resultados](#resultados)
+5. [Discusión y Conclusiones](#discusión-y-conclusiones)
+6. [Bibliografía](#bibliografía)
+7. [Anexos](#anexos)
+
+
+
+# **Resumen**
+
+La caquexia es un síndrome de desnutrición asociado a enfermedades crónicas como el cáncer, insuficiencia cardíaca, insuficiencia renal y enfermedades autoinmunes. Se caracteriza por la pérdida progresiva de masa muscular y adiposa, lo que deteriora significativamente la calidad de vida del paciente (Nishikawa et al., 2021). Este estudio analizó datos metabolómicos de pacientes con caquexia y un grupo control, utilizando el contenedor SummarizedExperiment.
+
+Se aplicó una prueba estadística t-test para comparar los niveles de creatina entre los dos grupos, encontrando diferencias significativas (valor p < 0.05). Para la visualización de los datos, se usaron gráficos generados con ggplot2, como boxplots y gráficos de dispersión, que destacaron variaciones en metabolitos como 3-metilhistidina, glucosa y aminoácidos de cadena ramificada (leucina, isoleucina, valina), ayudando a comprender mejor la distribución de los datos entre los grupos.
+
+# **Objetivos del Estudio**
+
+## **Objetivo principal**
+El objetivo principal de este estudio es crear un objeto SummarizedExperiment a partir de los datos del conjunto de datos 'human_cachexia.csv' y realizar un análisis exploratorio para identificar diferencias metabolómicas significativas entre los pacientes con caquexia y los controles."
+
+## **Objetivo Especificos**
+- Crear un objeto SummarizedExperiment a partir de los datos.
+- Explorar y analizar el conjunto de datos.
+
+# **Materiales y Métodos**
+
+## **Origen de los datos**
+
+Los datos utilizados en este análisis provienen de  GitHub nutrimetabolomics/metaboData, específicamente del dataset titulado human_cachexia.csv., el cual contiene datos de diferentes metabolitos y aminoácidos, pertenecientes a muestras de pacientes con con diagnóstico de caquexia y de un grupo de control.
+
+## **Estudios previos y selección de metabolitos para el análisis**
+
+Estudios previos en modelos animales han revelado que la caquexia presenta un perfil metabólico dinámicamente cambiante, identificando la participación de cinco vías metabólicas clave. Estas incluyen niveles bajos de glucosa, elevación de cuerpos cetónicos, disminución de aminoácidos de cadena ramificada, aumento de aminoácidos neutros y altos niveles de 3-metilhistidina y creatina. Estos hallazgos proporcionan una comprensión más profunda de los mecanismos metabólicos involucrados en la caquexia (Yang et al., 2017) (Chapela & Martinuzzi, 2018). En base a estos estudios, se seleccionaron ciertos metabolitos para su análisis, específicamente 3-metilhistidina, creatinina, glucosa y los aninoacidos que forman parte de la cadena ramificada que son: leucina, isoleucina y valina.
+
+## **Procedimiento de Análisis**
+
+El procedimiento de análisis se llevó a cabo en los siguientes pasos:
+Instalación y carga de bibliotecas necesarias como el paquete readr, que permite la lectura de archivos CSV.
+```{r}
+library(readr)
+```
+Se utilizó la función read_csv() para cargar el archivo CSV en un objeto llamado cachexia_data1, El conjunto de datos human_cachexia.csv consta de 77 filas y 65 columnas.
+```{r}
+cachexia_data1 <- read.csv("C:/Users/ADMINISTRATOR/Desktop/Bioinformatica/Datos omicos/human_cachexia.csv", header = TRUE, row.names = 1)
+```
+Exploramos los datos: 
+Realizamos un resumen con summary() para obtener una visión general de las variables, y tiene la siguiente estructura:
+Identificador de cada paciente (tipo chr).
+Muscle loss: Estado de pérdida muscular, categorizado como "cachexic" o "control" (tipo chr).
+Metabolitos: 63 columnas correspondientes a diferentes metabolitos, representados como num
+```{r}
+summary(cachexia_data1)
+```
+
+Para el análisis de los datos de caquexia, se utilizó la clase SummarizedExperiment, que es parte  de Bioconductor.
+Para instalar y cargar esta biblioteca en R, primero fue necesario instalar BiocManager y luego la biblioteca SummarizedExperiment, con el siguiente código:
+
+```{r}
+library(SummarizedExperiment)
+```
+Eliminamos el prefijo "X" que a veces se agrega a los nombres de las columnas cuando se cargan los datos desde un archivo CSV. Así se asegura que los nombres de las columnas sean más claros.
+```{r}
+colnames(cachexia_data1) <- gsub("^X", "", colnames(cachexia_data1))
+```
+Se transforma la columna Muscle.loss en un factor, definiendo dos niveles: "cachexic" y "control"
+```{r}
+cachexia_data1$Muscle.loss <- factor(cachexia_data1$Muscle.loss, levels = c("cachexic", "control"))
+```
+Fue necesario realizar una transposición (t()) para ajustar la estructura de los datos 
+```{r}
+expression_data_transposed <- t(cachexia_data1[, -which(names(cachexia_data1) == "Muscle.loss")])
+```
+Se creó el contenedor donde
+assays: los datos de expresión con los metabolitos 
+colData: los metadatos que incluye únicamente la variable Muscle.loss
+
+```{r}
+se <- SummarizedExperiment(
+  assays = list(counts = as.matrix(expression_data_transposed)),
+  colData = DataFrame(Muscle.loss = cachexia_data1$Muscle.loss)
+)
+
+
+se
+```
+Exploramos los datos del contenedor:
+
+```{r}
+head(assay(se))
+head(colData(se))
+```
+Se observaron las primeras filas del conjunto de datos para entender su formato y los tipos de datos presentes y identificaron las principales columnas que diferencian a los grupos de estudio: la variable Muscle loss y los metabolitos.
+
+Se puede obervar que de 70 pacientes, 30 de ellos son control y 37 pacientes con cachexia.
+
+```{r}
+sum(cachexia_data1$Muscle.loss == "control")
+sum (cachexia_data1$Muscle.loss == "cachexic")
+```
+Para la exploración y análisis de los datos, se utilizaron las siguientes bibliotecas:
+ggplot2: utilizada para la visualización y creación de gráficos.
+tidyr y dplyr: empleadas para manipular y transformar los datos.
+Se cargaron los datos de metabolitos y se separaron los grupos de pacientes en función de la variable Muscle.loss 
+Ademas se uso t-test para comparar los niveles de creatina entre los grupos de pérdida (cachexia y control), este test evalúa si existe una diferencia significativa entre las medias de los dos grupos. La hipótesis nula (H0) asumió que no había diferencia en las medias, mientras que la alternativa (H1) propuso que sí existía una diferencia. El análisis se realizó utilizando la función t.test() 
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+```
+
+# **Resultados**
+
+Se observa una gran variabilidad en los niveles de los metabolitos entre las diferentes muestras. Algunos metabolitos presentan niveles muy altos en ciertas muestras, mientras que en otras son prácticamente indetectables, ademas se observa valores atipicos.
+
+```{r}
+boxplot(t(assay(se)), main = "Distribucion de metabolitos por muestra", las = 2)
+
+```
+
+Al analizar pi.Methylhistidine y tau.Methylhistidine, se observa que  los niveles de pi-metilhistidina son significativamente más altos en el grupo caquéxico en comparación con el grupo control, lo que coincide con la expectativa de que la degradación muscular sea más pronunciada en individuos con caquexia.
+```{r}
+
+metabolitos_data <- assay(se)
+grupos <- colData(se)$Muscle.loss
+
+# Grafico los niveles de pi.Methylhistidine por grupo (boxplot)
+ggplot() +
+  geom_boxplot(aes(x = grupos, y = metabolitos_data["pi.Methylhistidine", ], fill = grupos)) +
+  labs(title = "Niveles de pi-Methylhistidine por grupo",
+       x = "Grupo (Muscle Loss)", y = "Nivel de pi-Methylhistidine") +
+  theme_minimal()
+
+# Grafico los niveles de tau.Methylhistidine por grupo (boxplot)
+ggplot() +
+  geom_boxplot(aes(x = grupos, y = metabolitos_data["tau.Methylhistidine", ], fill = grupos)) +
+  labs(title = "Niveles de tau-Methylhistidine por grupo",
+       x = "Grupo (Muscle Loss)", y = "Nivel de tau-Methylhistidine") +
+  theme_minimal()
+
+
+```
+Se compararon los niveles de creatina entre los grupos de pérdida muscular (cachexia) y control utilizando un test t . Dado que el valor p fue menor a 0.05, se rechazó la hipótesis nula, que planteaba que no había diferencia en las medias de creatina entre los grupos. Esto indica que los niveles de creatina difieren significativamente entre el grupo cachexia y el grupo control.Además, se realizo un boxplot donde se muestra la diferencia en los niveles de creatina entre ambos grupos.
+
+```{r}
+t_test_result <- t.test(assay(se)["Creatine", ] ~ colData(se)$Muscle.loss)
+
+# Gráfico boxplot para comparar los niveles de Creatina entre los grupos
+ggplot(data = NULL, aes(x = colData(se)$Muscle.loss, y = assay(se)["Creatine", ], fill = colData(se)$Muscle.loss)) +
+  geom_boxplot() +
+  geom_jitter(width = 0.2, aes(color = colData(se)$Muscle.loss), alpha = 0.6) +  
+  labs(title = paste("Prueba t de Creatina - p-value:", round(t_test_result$p.value, 4)),
+       x = "Grupo (Muscle Loss)",
+       y = "Nivel de Creatina") +
+  theme_minimal() +
+  stat_summary(fun = mean, geom = "point", shape = 18, size = 3, color = "black")       
+t_test_result
+
+
+```
+
+En los graficos de dispersion se observa los niveles de leucina y isoleucina fueron notablemente más altos en el grupo caquéxico, y se observó una mayor variabilidad en estos metabolitos en dicho grupo. Por otro lado, la diferencia en los niveles de Valina entre los grupos fue menor y la variabilidad fue más uniforme en ambos. Esto sugiere que, aunque leucina y Isoleucina presentan una mayor dispersión en el grupo caquéxico, la diferencia en los niveles de valina es menos marcada.
+
+```{r}
+#Leucina
+ggplot() +
+  geom_jitter(aes(x = grupos, y = metabolitos_data["Leucine", ], color = grupos), 
+              width = 0.2, alpha = 0.7) +  # Puntos dispersos
+  labs(title = "Niveles de Leucina entre grupos",
+       x = "Grupo (Muscle Loss)", y = "Nivel de Leucina") +
+  theme_minimal()
+# Isoleucina
+ggplot() +
+  geom_jitter(aes(x = grupos, y = metabolitos_data["Isoleucine", ], color = grupos), 
+              width = 0.2, alpha = 0.7) +  # Puntos dispersos
+  labs(title = "Niveles de Isoleucina entre grupos",
+       x = "Grupo (Muscle Loss)", y = "Nivel de Isoleucina") +
+  theme_minimal()
+# Valina
+ggplot() +
+  geom_jitter(aes(x = grupos, y = metabolitos_data["Valine", ], color = grupos), 
+              width = 0.2, alpha = 0.7) +  # Puntos dispersos
+  labs(title = "Niveles de Valina entre grupos",
+       x = "Grupo (Muscle Loss)", y = "Nivel de Valina") +
+  theme_minimal()
+```
+
+# **Discusión y Conclusiones**
+
+En este estudio, se realizó un análisis de datos metabolómicos de pacientes con caquexia y un grupo control utilizando el contenedor SummarizedExperiment. El análisis incluyó una prueba estadística t-test para evaluar si los niveles de creatina eran significativamente diferentes entre ambos grupos. Los resultados mostraron un valor p menor a 0.05, lo que indica diferencias significativas en los niveles de creatina entre los pacientes con caquexia y el grupo control. Para la visualización de los datos, se utilizó ggplot2, generando gráficos de cajas (boxplots) y de dispersión que ilustraron claramente las diferencias en variables como pi-metilhistidina, glucosa y algunos aminoácidos (leucina, isoleucina y valina) entre los grupos, lo que facilitó la comprensión de la distribución de los datos. Además, algunos metabolitos, como la glucosa y los aminoácidos de cadena ramificada, no mostraron resultados consistentes con lo reportado en la bibliografía.
+
+Sin embargo, el análisis tiene limitaciones. El tamaño de la muestra, con 77 pacientes, es relativamente pequeño, lo que dificulta aplicar los resultados a una población más amplia. Además, la falta de unidades de medida en los datos de metabolitos dificultó la interpretación precisa de sus niveles y complicó la comparación con otros estudios. También, la presencia de valores atípicos en algunos metabolitos afectó la interpretación de los resultados. Finalmente, la falta de datos clínicos adicionales limita la comprensión total de los hallazgos.
+
+
+
+# **Bibliografia:**
+
+Instituto Nacional del Cáncer. (s. f.). Caquexia: Un síndrome complejo en la investigación del cáncer. Instituto Nacional del Cáncer. Recuperado el 3 de noviembre de 2024 de https://www.cancer.gov/espanol/cancer/tratamiento/investigacion/caquexia
+
+Nishikawa, H., Goto, M., Fukunishi, S., Asai, A., Nishiguchi, S., & Higuchi, K. (2021). Cancer cachexia: Its mechanism and clinical significance. International Journal of Molecular Sciences, 22(16), 8491. https://doi.org/10.3390/ijms22168491
+
+Yang, Q.-J., Zhao, J.-R., Hao, J., Li, B., Huo, Y., Han, Y.-L., Wan, L.-L., Li, J., Huang, J., Lu, J., Yang, G.-J., & Guo, C. (2017). Serum and urine metabolomics study reveals a distinct diagnostic model for cancer cachexia. Journal of Cachexia, Sarcopenia and Muscle, 8(5), 749-760. https://doi.org/10.1002/jcsm.12246
+
+Chapela, S., & Martinuzzi, A. (2018). Pérdida de masa muscular en el paciente críticamente enfermo: ¿caquexia, sarcopenia y/o atrofia? impacto en la respuesta terapéutica y la supervivencia. Revista Cubana de Alimentación y Nutrición, 28(2), 393-416.
+
+
+# **Anexos**
+Reposición de los Datos en GitHub
+
+Para subir los archivos al repositorio de GitHub, se hizo lo siguiente:
+Primero se debe tener una cuenta en GitHub, despues se creo un reposorio con el nombre de Galvan-Villavicencio-Ximena-PEC1, se cargaron los archivos: el informe en pdf, el objeto contenedor .Rda (cachexia_datos.Rda) y el archivo Rmarkdown.
+
+El repositorio está disponible en: https://github.com/xgalvan/Galvan-Villavicencio-Ximena-PEC1.git
+
+
+Guardamos el objeto SummarizedExperiment en un archivo .Rda
+```{r}
+
+save(se, file = "cachexia_datos.Rda")
+```
+
+
+
+
+
